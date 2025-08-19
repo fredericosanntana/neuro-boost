@@ -3,12 +3,15 @@ import { FocusTimer } from "@/components/FocusTimer";
 import { TaskList } from "@/components/TaskList";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { Button } from "@/components/ui/button";
-import { Brain, Sun, Moon } from "lucide-react";
+import { Brain, Sun, Moon, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 const Index = () => {
   const [completedTasks, setCompletedTasks] = useState(0);
   const [focusSessions, setFocusSessions] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { user, isLoading, logout } = useAuth();
 
   const handleTaskComplete = () => {
     setCompletedTasks(prev => prev + 1);
@@ -23,6 +26,22 @@ const Index = () => {
     document.documentElement.classList.toggle('dark');
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-warm p-4">
+        <LoginForm />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-gradient-warm ${isDarkMode ? 'dark' : ''}`}>
       {/* Header */}
@@ -35,22 +54,33 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">ADHD Focus</h1>
-                <p className="text-sm text-muted-foreground">Produtividade com carinho</p>
+                <p className="text-sm text-muted-foreground">Olá, {user.name}!</p>
               </div>
             </div>
             
-            <Button
-              variant="gentle"
-              size="icon"
-              onClick={toggleTheme}
-              className="rounded-full"
-            >
-              {isDarkMode ? (
-                <Sun className="w-4 h-4" />
-              ) : (
-                <Moon className="w-4 h-4" />
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="gentle"
+                size="icon"
+                onClick={toggleTheme}
+                className="rounded-full"
+              >
+                {isDarkMode ? (
+                  <Sun className="w-4 h-4" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                className="gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       </header>
