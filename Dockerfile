@@ -1,20 +1,22 @@
-# Dockerfile para projeto Node.js/TypeScript (Vite)
+## Dockerfile para build e execução em produção
 FROM node:20-alpine
 
-# Diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de dependências
+# Copia os arquivos de dependências e instala
 COPY package.json package-lock.json* bun.lockb* ./
+RUN npm install
 
-# Instala as dependências
-RUN npm install || bun install
-
-# Copia o restante do código
+# Copia o restante do código-fonte
 COPY . .
 
-# Expõe a porta padrão do Vite
-EXPOSE 5173
+# Build do front-end e do servidor
+RUN npm run build && npm run build:server
 
-# Comando padrão para desenvolvimento
-CMD ["npm", "run", "dev"]
+ENV NODE_ENV=production
+
+# Expõe a porta da API
+EXPOSE 3001
+
+# Comando para iniciar o servidor compilado
+CMD ["npm", "run", "start:server"]
