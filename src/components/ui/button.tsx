@@ -18,11 +18,17 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // ADHD-friendly variants
+        focus: "bg-gradient-focus text-focus-foreground shadow-focus hover:shadow-focus/80 hover:scale-105 transition-all duration-300 ease-bounce",
+        success: "bg-gradient-success text-success-foreground shadow-success hover:shadow-success/80 hover:scale-105 transition-all duration-300 ease-bounce",
+        gentle: "bg-accent text-accent-foreground border border-accent/30 hover:bg-accent/80 hover:shadow-gentle transition-all duration-300 ease-gentle",
+        primary: "bg-gradient-primary text-primary-foreground shadow-gentle hover:shadow-focus hover:scale-105 transition-all duration-300 ease-bounce"
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
+        xl: "h-14 rounded-lg px-10 text-base",
         icon: "h-10 w-10",
       },
     },
