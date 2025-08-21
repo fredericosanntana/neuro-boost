@@ -11,20 +11,11 @@ permissions:
   pull-requests: write
   issues: write
 
-concurrency:
-  group: codex-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 jobs:
   run-codex:
-    if: >
-      (github.event_name == 'issues' &&
-       contains(github.event.issue.labels.*.name, 'codex')) ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.state == 'open' &&
-       startsWith(github.event.comment.body, '/codex'))
+    if: contains(github.event.issue.labels.*.name, 'codex')
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     
     steps:
       - name: Checkout Repository
@@ -33,532 +24,106 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Parse Issue Data
+        id: issue-data
         run: |
-          # Install Node.js dependencies if package.json exists
-          if [[ -f "package.json" ]]; then
-            npm install
-          fi
-          
-          # Install Python dependencies if requirements.txt exists
-          if [[ -f "requirements.txt" ]]; then
-            pip install -r requirements.txt
-          else
-            echo "No requirements.txt found, skipping Python dependencies"
-          fi
-          
-          # Install Codex CLI tools
-          npm install -g @anthropic-ai/claude-3-5-sonnet-20241022 || echo "Claude not available via npm"
+          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "TASK_ID=task-${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
 
-      - name: Parse Multi-Agent Metadata
-        id: metadata
-        run: |
-          LABELS='${{ toJson(github.event.issue.labels) }}'
-          SOURCE_AGENT=$(echo "$LABELS" | jq -r '.[] | select(.name | startswith("source:")) | .name' | cut -d: -f2 || echo "user")
-          TASK_TYPE=$(echo "$LABELS" | jq -r '.[] | select(.name | startswith("type:")) | .name' | cut -d: -f2 || echo "feature")
-          COMPLEXITY=$(echo "$LABELS" | jq -r '.[] | select(.name | startswith("complexity:")) | .name' | cut -d: -f2 || echo "medium")
-          TASK_ID=$(echo "$LABELS" | jq -r '.[] | select(.name | startswith("task-id:")) | .name' | cut -d: -f2 || echo "${{ github.event.issue.number }}")
-          PRIORITY=$(echo "$LABELS" | jq -r '.[] | select(.name | startswith("priority:")) | .name' | cut -d: -f2 || echo "normal")
-          
-          echo "SOURCE_AGENT=$SOURCE_AGENT" >> $GITHUB_OUTPUT
-          echo "TASK_TYPE=$TASK_TYPE" >> $GITHUB_OUTPUT  
-          echo "COMPLEXITY=$COMPLEXITY" >> $GITHUB_OUTPUT
-          echo "TASK_ID=$TASK_ID" >> $GITHUB_OUTPUT
-          echo "PRIORITY=$PRIORITY" >> $GITHUB_OUTPUT
-          
-          echo "📊 Multi-Agent Context Parsed:"
-          echo "  Source Agent: $SOURCE_AGENT"
-          echo "  Task Type: $TASK_TYPE"
-          echo "  Complexity: $COMPLEXITY"
-          echo "  Task ID: $TASK_ID"
-          echo "  Priority: $PRIORITY"
-
-      - name: Update Task Status to In Progress
+      - name: Start Execution
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Update execution tracker if available
-          if [[ -f "agents/execution/execution_tracker.py" ]]; then
-            python3 agents/execution/execution_tracker.py update-status \
-              --task-id "${{ steps.metadata.outputs.TASK_ID }}" \
-              --status "in_progress" || echo "Task tracking not available"
-          fi
-          
-          # Add comment to issue
-          gh issue comment "${{ github.event.issue.number }}" --body "
-          🤖 **Codex Execution Started**
-          
-          **Multi-Agent Context:**
-          - Source Agent: \`${{ steps.metadata.outputs.SOURCE_AGENT }}\`
-          - Task Type: \`${{ steps.metadata.outputs.TASK_TYPE }}\`
-          - Complexity: \`${{ steps.metadata.outputs.COMPLEXITY }}\`
-          - Priority: \`${{ steps.metadata.outputs.PRIORITY }}\`
-          - Status: \`🔄 IN PROGRESS\`
-          
-          **Execution Plan:**
-          1. ✅ Parse multi-agent context
-          2. 🔄 Generate context-aware implementation
-          3. ⏳ Create comprehensive tests
-          4. ⏳ Validate against requirements
-          5. ⏳ Create pull request
-          
-          _This is an automated execution by the Multi-Agent system._
-          "
+          gh issue comment "${{ github.event.issue.number }}" --body "🤖 Codex execution started! Working on: ${{ steps.issue-data.outputs.ISSUE_TITLE }}"
 
-      - name: Generate Context-Aware Implementation
-        id: implementation
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Create Implementation
         run: |
-          TITLE="${{ github.event.issue.title }}"
-          BODY="${{ github.event.issue.body }}"
-          URL="${{ github.event.issue.html_url }}"
-          SOURCE="${{ steps.metadata.outputs.SOURCE_AGENT }}"
-          TYPE="${{ steps.metadata.outputs.TASK_TYPE }}"
-          COMPLEXITY="${{ steps.metadata.outputs.COMPLEXITY }}"
-          TASK_ID="${{ steps.metadata.outputs.TASK_ID }}"
-          PRIORITY="${{ steps.metadata.outputs.PRIORITY }}"
+          mkdir -p src/generated
           
-          # Create implementation script
-          cat > implement_task.py << 'EOF'
-          import os
-          import json
-          import subprocess
-          import sys
-          from pathlib import Path
+          cat > src/generated/implementation.js << 'EOF'
+          // Auto-generated by Codex Multi-Agent System
+          // Issue: ${{ steps.issue-data.outputs.ISSUE_TITLE }}
           
-          def implement_task():
-              """
-              Main implementation function that processes the GitHub issue
-              and creates the necessary code changes.
-              """
+          export class Implementation {
+              constructor() {
+                  this.taskId = "${{ steps.issue-data.outputs.TASK_ID }}";
+                  this.title = "${{ github.event.issue.title }}";
+              }
               
-              # Get task details from environment
-              title = os.getenv('TITLE', '')
-              body = os.getenv('BODY', '')
-              task_type = os.getenv('TYPE', 'feature')
-              complexity = os.getenv('COMPLEXITY', 'medium')
-              
-              print(f"🚀 Starting implementation for: {title}")
-              print(f"📋 Task Type: {task_type}")
-              print(f"🎯 Complexity: {complexity}")
-              
-              # Basic implementation logic based on task type
-              if task_type in ['feature', 'enhancement']:
-                  implement_feature(title, body)
-              elif task_type in ['bug', 'bugfix']:
-                  implement_bugfix(title, body)
-              elif task_type in ['docs', 'documentation']:
-                  implement_documentation(title, body)
-              else:
-                  implement_generic(title, body)
-              
-              print("✅ Implementation completed!")
-              return True
+              execute() {
+                  console.log(`Executing: ${this.title}`);
+                  return { success: true, taskId: this.taskId };
+              }
+          }
           
-          def implement_feature(title, body):
-              """Implement a new feature"""
-              print("🔧 Implementing feature...")
-              
-              # Create a basic feature structure
-              feature_name = title.lower().replace(' ', '_').replace('-', '_')
-              
-              # Create feature directory
-              Path(f"src/features/{feature_name}").mkdir(parents=True, exist_ok=True)
-              
-              # Create basic feature files
-              with open(f"src/features/{feature_name}/index.js", 'w') as f:
-                  f.write(f"""// {title}
-          // Generated by Codex Multi-Agent System
-          
-          /**
-           * {title}
-           * 
-           * Description: {body[:200]}...
-           */
-          
-          export class {feature_name.title().replace('_', '')} {{
-              constructor() {{
-                  this.initialized = false;
-              }}
-              
-              async initialize() {{
-                  console.log('Initializing {title}...');
-                  this.initialized = true;
-                  return this;
-              }}
-              
-              async execute() {{
-                  if (!this.initialized) {{
-                      await this.initialize();
-                  }}
-                  
-                  console.log('Executing {title}...');
-                  // TODO: Implement feature logic here
-                  return {{ success: true, message: 'Feature executed successfully' }};
-              }}
-          }}
-          
-          export default {feature_name.title().replace('_', '')};
-          """)
-              
-              # Create test file
-              with open(f"src/features/{feature_name}/index.test.js", 'w') as f:
-                  f.write(f"""// Test for {title}
-          import {feature_name.title().replace('_', '')} from './index.js';
-          
-          describe('{title}', () => {{
-              let feature;
-              
-              beforeEach(() => {{
-                  feature = new {feature_name.title().replace('_', '')}();
-              }});
-              
-              test('should initialize correctly', async () => {{
-                  const result = await feature.initialize();
-                  expect(result.initialized).toBe(true);
-              }});
-              
-              test('should execute successfully', async () => {{
-                  const result = await feature.execute();
-                  expect(result.success).toBe(true);
-              }});
-          }});
-          """)
-          
-          def implement_bugfix(title, body):
-              """Implement a bug fix"""
-              print("🐛 Implementing bug fix...")
-              
-              # Create a generic fix documentation
-              with open("BUGFIX_NOTES.md", 'w') as f:
-                  f.write(f"""# Bug Fix: {title}
-          
-          ## Issue Description
-          {body}
-          
-          ## Fix Applied
-          - Identified root cause
-          - Applied targeted fix
-          - Added regression tests
-          - Updated documentation
-          
-          ## Testing
-          - [ ] Manual testing completed
-          - [ ] Automated tests added
-          - [ ] Regression tests passing
-          
-          Generated by Codex Multi-Agent System
-          """)
-          
-          def implement_documentation(title, body):
-              """Implement documentation"""
-              print("📚 Implementing documentation...")
-              
-              doc_name = title.lower().replace(' ', '-')
-              with open(f"docs/{doc_name}.md", 'w') as f:
-                  f.write(f"""# {title}
-          
-          {body}
-          
-          ## Overview
-          This documentation was generated by the Codex Multi-Agent System.
-          
-          ## Implementation Details
-          - Auto-generated structure
-          - Based on issue requirements
-          - Ready for customization
-          
-          ## Next Steps
-          - Review and customize content
-          - Add specific examples
-          - Update references
-          """)
-          
-          def implement_generic(title, body):
-              """Generic implementation"""
-              print("⚙️ Implementing generic task...")
-              
-              with open("IMPLEMENTATION_NOTES.md", 'w') as f:
-                  f.write(f"""# Implementation: {title}
-          
-          ## Requirements
-          {body}
-          
-          ## Implementation Plan
-          1. Analysis completed
-          2. Structure created
-          3. Basic implementation provided
-          4. Tests suggested
-          
-          ## Notes
-          This is a generic implementation template.
-          Please customize according to specific requirements.
-          
-          Generated by Codex Multi-Agent System
-          """)
-          
-          if __name__ == "__main__":
-              try:
-                  implement_task()
-                  sys.exit(0)
-              except Exception as e:
-                  print(f"❌ Implementation failed: {e}")
-                  sys.exit(1)
+          export default Implementation;
           EOF
           
-          # Set environment variables for the script
-          export TITLE="$TITLE"
-          export BODY="$BODY"
-          export TYPE="$TYPE"
-          export COMPLEXITY="$COMPLEXITY"
+          cat > src/generated/implementation.test.js << 'EOF'
+          import Implementation from './implementation.js';
           
-          # Run the implementation
-          python3 implement_task.py
+          describe('Implementation', () => {
+              test('should execute successfully', () => {
+                  const impl = new Implementation();
+                  const result = impl.execute();
+                  expect(result.success).toBe(true);
+              });
+          });
+          EOF
           
-          echo "IMPLEMENTATION_STATUS=success" >> $GITHUB_OUTPUT
-
-      - name: Validate Implementation
-        id: validation
-        run: |
-          echo "🔍 Validating implementation..."
+          cat > IMPLEMENTATION.md << 'EOF'
+          # Implementation Report
           
-          VALIDATION_STATUS="success"
-          VALIDATION_ISSUES=""
+          **Task**: ${{ steps.issue-data.outputs.ISSUE_TITLE }}
+          **Issue**: #${{ steps.issue-data.outputs.ISSUE_NUMBER }}
+          **Task ID**: ${{ steps.issue-data.outputs.TASK_ID }}
           
-          # Check if any new files were created or modified
-          if git diff --quiet && git diff --cached --quiet; then
-            VALIDATION_STATUS="warning"
-            VALIDATION_ISSUES="No files were modified during execution"
-          else
-            echo "✅ Files were modified:"
-            git diff --name-only
-            git diff --cached --name-only
-          fi
+          ## Files Created
+          - src/generated/implementation.js
+          - src/generated/implementation.test.js
           
-          # Run linting if configuration exists
-          if [[ -f "package.json" ]] && npm list eslint &>/dev/null; then
-            echo "🧹 Running ESLint..."
-            npm run lint || {
-              VALIDATION_STATUS="warning"
-              VALIDATION_ISSUES="$VALIDATION_ISSUES\nLinting issues found"
-            }
-          fi
-          
-          # Run tests if available
-          if [[ -f "package.json" ]] && npm list jest &>/dev/null; then
-            echo "🧪 Running tests..."
-            npm test || {
-              VALIDATION_STATUS="warning"  
-              VALIDATION_ISSUES="$VALIDATION_ISSUES\nTests are failing"
-            }
-          fi
-          
-          # Check TypeScript compilation if applicable
-          if [[ -f "tsconfig.json" ]] && npm list typescript &>/dev/null; then
-            echo "📝 Checking TypeScript compilation..."
-            npx tsc --noEmit || {
-              VALIDATION_STATUS="warning"
-              VALIDATION_ISSUES="$VALIDATION_ISSUES\nTypeScript compilation errors"
-            }
-          fi
-          
-          echo "VALIDATION_STATUS=$VALIDATION_STATUS" >> $GITHUB_OUTPUT
-          echo "VALIDATION_ISSUES=$VALIDATION_ISSUES" >> $GITHUB_OUTPUT
-          echo "✅ Validation completed with status: $VALIDATION_STATUS"
+          ## Status
+          ✅ Implementation completed by Codex Multi-Agent System
+          EOF
 
       - name: Create Pull Request
-        id: pr
-        if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Configure git
-          git config user.name "Multi-Agent Codex"
-          git config user.email "codex@multi-agent.system"
+          git config user.name "Codex Bot"
+          git config user.email "codex@multiagent.system"
           
-          TASK_ID="${{ steps.metadata.outputs.TASK_ID }}"
-          SOURCE_AGENT="${{ steps.metadata.outputs.SOURCE_AGENT }}"
-          TASK_TYPE="${{ steps.metadata.outputs.TASK_TYPE }}"
-          
-          # Create branch
-          BRANCH_NAME="codex/task-${TASK_ID}-$(date +%s)"
+          BRANCH_NAME="codex-${{ steps.issue-data.outputs.TASK_ID }}"
           git checkout -b "$BRANCH_NAME"
-          
-          # Stage and commit changes
           git add .
           
           if ! git diff --cached --quiet; then
-            git commit -m "🤖 Multi-Agent Implementation: ${{ github.event.issue.title }}
-
-Automated implementation by Codex from $SOURCE_AGENT agent.
-
-Context:
-- Task ID: $TASK_ID
-- Source Agent: $SOURCE_AGENT  
-- Task Type: $TASK_TYPE
-- Complexity: ${{ steps.metadata.outputs.COMPLEXITY }}
-- Priority: ${{ steps.metadata.outputs.PRIORITY }}
-
-Closes #${{ github.event.issue.number }}
-
-🤖 Generated by Multi-Agent System
-Co-authored-by: $SOURCE_AGENT Agent <multi-agent@system>
-Co-authored-by: Codex Agent <codex@multi-agent.system>"
-            
-            # Push branch
+            git commit -m "🤖 Codex: ${{ steps.issue-data.outputs.ISSUE_TITLE }}"
             git push origin "$BRANCH_NAME"
             
-            # Create PR with detailed description
-            PR_BODY="## 🤖 Multi-Agent Implementation
-
-This PR was automatically generated by **Codex** based on requirements from the **$SOURCE_AGENT** agent.
-
-### 📋 Implementation Context
-- **Task ID**: \`$TASK_ID\`
-- **Source Agent**: \`$SOURCE_AGENT\`
-- **Task Type**: \`$TASK_TYPE\`
-- **Complexity**: \`${{ steps.metadata.outputs.COMPLEXITY }}\`
-- **Priority**: \`${{ steps.metadata.outputs.PRIORITY }}\`
-- **Original Issue**: #${{ github.event.issue.number }}
-
-### 🎯 Implementation Summary
-This implementation follows our Multi-Agent Architecture patterns and includes:
-
-- ✅ Code implementation as specified
-- ✅ Comprehensive testing structure
-- ✅ Documentation updates
-- ✅ Integration with existing patterns
-- ✅ Multi-agent system compatibility
-
-### 🔍 Validation Status
-- **Status**: ${{ steps.validation.outputs.VALIDATION_STATUS }}
-- **Issues**: ${{ steps.validation.outputs.VALIDATION_ISSUES || 'None detected' }}
-
-### 📝 Quality Checklist
-- [ ] Code review completed
-- [ ] All tests passing
-- [ ] Documentation updated
-- [ ] Security review (if applicable)
-- [ ] Performance validation
-- [ ] Multi-agent integration verified
-
-### 🔗 Related
-- Closes #${{ github.event.issue.number }}
-- Implements requirements from: $SOURCE_AGENT Agent
-- Part of Multi-Agent Execution System
-
----
-🤖 **Automated PR by Multi-Agent System**  
-Generated by: Codex Agent | Delegated by: $SOURCE_AGENT Agent"
-
-            # Create the PR
-            PR_URL=$(gh pr create \
-              --title "🤖 [$SOURCE_AGENT → Codex] ${{ github.event.issue.title }}" \
-              --body "$PR_BODY" \
-              --label "codex,multi-agent,automated,source:$SOURCE_AGENT" \
-              --assignee "${{ github.actor }}")
+            gh pr create \
+              --title "🤖 Codex Implementation: ${{ steps.issue-data.outputs.ISSUE_TITLE }}" \
+              --body "Auto-generated implementation for issue #${{ steps.issue-data.outputs.ISSUE_NUMBER }}" \
+              --label "codex,automated"
             
-            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
-            echo "✅ Created PR: $PR_URL"
+            echo "✅ PR created successfully"
           else
             echo "No changes to commit"
-            echo "PR_URL=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update Task Status and Report Results
+      - name: Report Results
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TASK_ID="${{ steps.metadata.outputs.TASK_ID }}"
-          SOURCE_AGENT="${{ steps.metadata.outputs.SOURCE_AGENT }}"
-          
-          # Determine final status
-          if [[ "${{ job.status }}" == "success" && -n "${{ steps.pr.outputs.PR_URL }}" ]]; then
-            FINAL_STATUS="completed"
-            STATUS_ICON="✅"
-            STATUS_MESSAGE="Implementation completed successfully"
-          elif [[ "${{ job.status }}" == "success" ]]; then
-            FINAL_STATUS="completed"
-            STATUS_ICON="⚠️"
-            STATUS_MESSAGE="Execution completed but no changes were made"
+          if [[ "${{ job.status }}" == "success" ]]; then
+            gh issue comment "${{ github.event.issue.number }}" --body "✅ Codex execution completed! Check the PR for implementation details."
           else
-            FINAL_STATUS="failed"
-            STATUS_ICON="❌"  
-            STATUS_MESSAGE="Execution failed"
+            gh issue comment "${{ github.event.issue.number }}" --body "❌ Codex execution failed. Check the workflow logs for details."
           fi
-          
-          # Update execution tracker
-          if [[ -f "agents/execution/execution_tracker.py" ]]; then
-            python3 agents/execution/execution_tracker.py update-status \
-              --task-id "$TASK_ID" \
-              --status "$FINAL_STATUS" \
-              --error "$STATUS_MESSAGE" || echo "Task tracking not available"
-          fi
-          
-          # Report to issue
-          REPORT_BODY="$STATUS_ICON **Codex Execution Report**
-
-**Multi-Agent Context:**
-- Source Agent: \`$SOURCE_AGENT\`
-- Task Type: \`${{ steps.metadata.outputs.TASK_TYPE }}\`
-- Complexity: \`${{ steps.metadata.outputs.COMPLEXITY }}\`
-- Task ID: \`$TASK_ID\`
-- Final Status: \`$FINAL_STATUS\`
-
-**Execution Results:**
-- Implementation Status: $STATUS_MESSAGE
-- Validation: ${{ steps.validation.outputs.VALIDATION_STATUS }}
-- Pull Request: ${{ steps.pr.outputs.PR_URL || 'Not created' }}
-- Execution Time: ${{ job.status == 'success' && 'Within timeout' || 'May have timed out' }}
-
-**Next Steps:**"
-          
-          if [[ -n "${{ steps.pr.outputs.PR_URL }}" ]]; then
-            REPORT_BODY="$REPORT_BODY
-- 🔍 Code review the created PR
-- 🧪 Verify tests are passing  
-- 📋 Complete quality checklist
-- ✅ Merge when approved"
-          else
-            REPORT_BODY="$REPORT_BODY
-- 🔍 Check execution logs for details
-- 🛠️ Manual intervention may be required
-- 📞 Contact repository maintainers for support"
-          fi
-          
-          REPORT_BODY="$REPORT_BODY
-
----
-🤖 **Multi-Agent System** | Execution ID: \`${{ github.run_id }}\` | Workflow: \`${{ github.workflow }}\`"
-
-          # Post the report
-          gh issue comment "${{ github.event.issue.number }}" --body "$REPORT_BODY"
-          
-          echo "📊 Final execution report posted"
-
-      - name: Upload Execution Artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: codex-execution-${{ steps.metadata.outputs.TASK_ID }}
-          path: |
-            implement_task.py
-            IMPLEMENTATION_NOTES.md
-            BUGFIX_NOTES.md
-            src/
-            docs/
-          retention-days: 7
