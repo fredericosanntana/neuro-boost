@@ -1,0 +1,103 @@
+# Production Docker Compose Configuration
+# Security-hardened configuration for production deployment
+
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      target: production
+    container_name: neuro-boost-app-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    # Only expose to Traefik network, not to host
+    expose:
+      - "3001"
+    depends_on:
+      - db
+    networks:
+      - app-network
+      - traefik-network
+    labels:
+      # Traefik configuration
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-network"
+      - "traefik.http.routers.neuro-boost.rule=Host(`neuro-boost.dpo2u.com`)"
+      - "traefik.http.routers.neuro-boost.entrypoints=websecure"
+      - "traefik.http.routers.neuro-boost.tls.certresolver=leresolver"
+      - "traefik.http.services.neuro-boost.loadbalancer.server.port=3001"
+      # Security headers (additional layer)
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXSSFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.routers.neuro-boost.middlewares=security-headers@docker"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    image: postgres:15-alpine
+    container_name: neuro-boost-db-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      # Security configuration
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    # No port mapping - database only accessible internally
+    networks:
+      - app-network
+    volumes:
+      - neuroboost_db_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Security: Run as non-root user
+    user: postgres
+
+volumes:
+  neuroboost_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/docker/volumes/neuroboost_db_data
+
+networks:
+  app-network:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+  traefik-network:
+    external: true

@@ -1,0 +1,56 @@
+# Security Monitoring Configuration for Neuro-Boost Application
+
+version: '3.8'
+
+services:
+  # Application with security monitoring
+  app:
+    extends:
+      file: docker-compose.prod.yml
+      service: app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=neuro-boost,environment=production"
+    
+  # Security monitoring with Fail2Ban
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: neuro-boost-fail2ban
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/log:/var/log/host:ro
+      - ./fail2ban-config:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - FAIL2BAN_LOGLEVEL=INFO
+      - SSMTP_HOST=smtp.gmail.com
+      - SSMTP_PORT=587
+      - SSMTP_HOSTNAME=neuro-boost.dpo2u.com
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Log aggregation and monitoring
+  log-monitor:
+    image: grafana/promtail:latest
+    container_name: neuro-boost-log-monitor
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log/host:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - monitoring
+    command: -config.file=/etc/promtail/config.yml
+    
+networks:
+  monitoring:
+    driver: bridge

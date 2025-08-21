@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  neuro-boost-tasks:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: neuro-boost-tasks
+    restart: unless-stopped
+    labels:
+      # Traefik configuration
+      - "traefik.enable=true"
+      - "traefik.http.routers.neuro-boost-tasks.rule=Host(`tasks.dpo2u.com`)"
+      - "traefik.http.routers.neuro-boost-tasks.entrypoints=websecure"
+      - "traefik.http.routers.neuro-boost-tasks.tls.certresolver=leresolver"
+      
+      # Service configuration
+      - "traefik.http.services.neuro-boost-tasks.loadbalancer.server.port=80"
+      
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.neuro-boost-tasks-http.rule=Host(`tasks.dpo2u.com`)"
+      - "traefik.http.routers.neuro-boost-tasks-http.entrypoints=web"
+      - "traefik.http.routers.neuro-boost-tasks-http.middlewares=redirect-to-https"
+      
+      # Security middleware
+      - "traefik.http.middlewares.neuro-boost-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.neuro-boost-security.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.neuro-boost-security.headers.browserXSSFilter=true"
+      - "traefik.http.middlewares.neuro-boost-security.headers.referrerPolicy=no-referrer-when-downgrade"
+      - "traefik.http.middlewares.neuro-boost-security.headers.customRequestHeaders.X-Forwarded-Proto=https"
+      
+      # Compression middleware
+      - "traefik.http.middlewares.neuro-boost-compress.compress=true"
+      
+      # Apply middlewares
+      - "traefik.http.routers.neuro-boost-tasks.middlewares=neuro-boost-security@docker,neuro-boost-compress@docker"
+      
+      # Health check labels
+      - "traefik.http.services.neuro-boost-tasks.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.neuro-boost-tasks.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.neuro-boost-tasks.loadbalancer.healthcheck.timeout=10s"
+      
+    networks:
+      - traefik-network
+    
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  traefik-network:
+    external: true
+
+# Health check with retry logic
+x-healthcheck: &healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
