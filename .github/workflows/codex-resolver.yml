@@ -262,7 +262,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "🤖 Multi-Agent Implementation: ${{ github.event.issue.title }}
 
-Automated implementation by Codex from $SOURCE_AGENT agent.
+
 
 Context:
 - Task ID: $TASK_ID
