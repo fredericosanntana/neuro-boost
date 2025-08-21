@@ -168,21 +168,28 @@ export const TaskList = ({ onTaskComplete }: TaskListProps) => {
     }
   };
 
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(task => {
+  const toggleTask = (id:string) => {
+    let taskToMove: Task | undefined;
+    const remainingTasks = tasks.filter(task => {
       if (task.id === id) {
-        const updated = { ...task, completed: !task.completed };
-        if (updated.completed) {
-          onTaskComplete();
-          toast({
-            title: "Tarefa concluída! 🎉",
-            description: "Mais uma vitória conquistada!",
-          });
-        }
-        return updated;
+        taskToMove = { ...task, completed: !task.completed };
+        return false;
       }
-      return task;
-    }));
+      return true;
+    });
+
+    if (taskToMove) {
+      if (taskToMove.completed) {
+        setTasks([...remainingTasks, taskToMove]);
+        onTaskComplete();
+        toast({
+          title: "Tarefa concluída! 🎉",
+          description: "Mais uma vitória conquistada!",
+        });
+      } else {
+        setTasks([taskToMove, ...remainingTasks]);
+      }
+    }
   };
 
   const removeTask = (id: string) => {
