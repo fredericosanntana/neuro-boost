@@ -1,14 +1,17 @@
 import { Router } from 'express';
-import jwt from 'jsonwebtoken';
 import { UserRepository } from '../repositories/UserRepository';
 import { validateRequest, LoginSchema, RegisterSchema } from '../../src/lib/validation';
 import { BadRequestError, UnauthorizedError } from '../../src/lib/errors';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { 
+  authenticateToken, 
+  AuthenticatedRequest, 
+  generateAccessToken, 
+  generateRefreshToken,
+  verifyRefreshToken 
+} from '../middleware/auth';
 import { logger } from '../../src/lib/logger';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Register endpoint
 router.post('/register', async (req, res, next) => {
@@ -17,19 +20,24 @@ router.post('/register', async (req, res, next) => {
     
     const user = await UserRepository.create(userData);
     
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    logger.info('User registered successfully', { userId: user.id, email: user.email });
+    logger.info('User registered successfully', { 
+      userId: user.id, 
+      email: user.email,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
 
     res.status(201).json({
       success: true,
       data: {
-        user,
-        token,
+        user: UserRepository.toPublic(user),
+        tokens: {
+          access: accessToken,
+          refresh: refreshToken
+        }
       },
       message: 'User registered successfully',
     });
@@ -48,21 +56,26 @@ router.post('/login', async (req, res, next) => {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
     const publicUser = UserRepository.toPublic(user);
 
-    logger.info('User logged in successfully', { userId: user.id, email: user.email });
+    logger.info('User logged in successfully', { 
+      userId: user.id, 
+      email: user.email,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
 
     res.json({
       success: true,
       data: {
         user: publicUser,
-        token,
+        tokens: {
+          access: accessToken,
+          refresh: refreshToken
+        }
       },
       message: 'Login successful',
     });
@@ -109,26 +122,40 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res,
 });
 
 // Refresh token endpoint
-router.post('/refresh', authenticateToken, async (req: AuthenticatedRequest, res, next) => {
+router.post('/refresh', async (req, res, next) => {
   try {
-    if (!req.user) {
-      throw new UnauthorizedError('User not authenticated');
-    }
+    const { refreshToken } = validateRequest({ 
+      type: 'object', 
+      properties: { 
+        refreshToken: { type: 'string', minLength: 1 } 
+      }, 
+      required: ['refreshToken'] 
+    }, req.body);
 
-    const user = await UserRepository.findById(req.user.id);
+    const decoded = verifyRefreshToken(refreshToken);
+    
+    const user = await UserRepository.findById(decoded.userId);
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    logger.info('Token refreshed successfully', { 
+      userId: user.id, 
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
 
     res.json({
       success: true,
-      data: { token },
+      data: { 
+        tokens: {
+          access: newAccessToken,
+          refresh: newRefreshToken
+        }
+      },
       message: 'Token refreshed successfully',
     });
   } catch (error) {

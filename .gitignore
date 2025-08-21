@@ -79,3 +79,27 @@ temp/
 
 # OS generated files
 Thumbs.db
+
+# Security sensitive files
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.mdb
+
+# Docker override files
+docker-compose.override.yml
+
+# Backup files
+*.backup
+*.bak
+*.old

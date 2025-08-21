@@ -26,7 +26,7 @@ const UpdateFocusSessionSchema = z.object({
 const DistractionSchema = z.object({
   type: z.enum(['thought', 'noise', 'notification', 'impulse', 'other']),
   description: z.string().max(200).optional(),
-  severity: z.enum([1, 2, 3])
+  severity: z.enum(['1', '2', '3'])
 });
 
 // All focus routes require authentication

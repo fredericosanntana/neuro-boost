@@ -3,8 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, Star } from "lucide-react";
+import { Plus, X, Star, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Task {
   id: string;
@@ -17,6 +36,86 @@ interface TaskListProps {
   onTaskComplete: () => void;
 }
 
+interface SortableTaskItemProps {
+  task: Task;
+  onToggleTask: (id: string) => void;
+  onRemoveTask: (id: string) => void;
+  onTogglePriority: (id: string) => void;
+}
+
+const SortableTaskItem = ({ task, onToggleTask, onRemoveTask, onTogglePriority }: SortableTaskItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ease-gentle ${
+        task.completed 
+          ? 'bg-success-soft border-success/30 opacity-75' 
+          : 'bg-background border-accent/30 hover:border-primary/50'
+      } ${isDragging ? 'shadow-lg z-10' : ''}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-primary transition-colors"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+      
+      <Checkbox
+        checked={task.completed}
+        onCheckedChange={() => onToggleTask(task.id)}
+        className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+      />
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onTogglePriority(task.id)}
+        className={`h-6 w-6 ${task.priority ? 'text-focus' : 'text-muted-foreground hover:text-focus'}`}
+      >
+        <Star className={`w-3 h-3 ${task.priority ? 'fill-current' : ''}`} />
+      </Button>
+
+      <span
+        className={`flex-1 text-sm ${
+          task.completed 
+            ? 'line-through text-muted-foreground' 
+            : task.priority 
+            ? 'font-medium text-foreground' 
+            : 'text-foreground'
+        }`}
+      >
+        {task.text}
+      </span>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onRemoveTask(task.id)}
+        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+      >
+        <X className="w-3 h-3" />
+      </Button>
+    </div>
+  );
+};
+
 export const TaskList = ({ onTaskComplete }: TaskListProps) => {
   const [tasks, setTasks] = useState<Task[]>([
     { id: "1", text: "Configurar ambiente de trabalho", completed: false, priority: true },
@@ -24,6 +123,33 @@ export const TaskList = ({ onTaskComplete }: TaskListProps) => {
   ]);
   const [newTask, setNewTask] = useState("");
   const { toast } = useToast();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setTasks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        const reorderedTasks = arrayMove(items, oldIndex, newIndex);
+        
+        toast({
+          title: "Tarefa reordenada! 🔄",
+          description: "Lista de tarefas reorganizada com sucesso!",
+        });
+
+        return reorderedTasks;
+      });
+    }
+  };
 
   const addTask = () => {
     if (newTask.trim()) {
@@ -104,55 +230,29 @@ export const TaskList = ({ onTaskComplete }: TaskListProps) => {
           </Button>
         </div>
 
-        {/* Task list */}
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ease-gentle ${
-                task.completed 
-                  ? 'bg-success-soft border-success/30 opacity-75' 
-                  : 'bg-background border-accent/30 hover:border-primary/50'
-              }`}
+        {/* Task list with drag & drop */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            <SortableContext
+              items={tasks.map(task => task.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <Checkbox
-                checked={task.completed}
-                onCheckedChange={() => toggleTask(task.id)}
-                className="data-[state=checked]:bg-success data-[state=checked]:border-success"
-              />
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => togglePriority(task.id)}
-                className={`h-6 w-6 ${task.priority ? 'text-focus' : 'text-muted-foreground hover:text-focus'}`}
-              >
-                <Star className={`w-3 h-3 ${task.priority ? 'fill-current' : ''}`} />
-              </Button>
-
-              <span
-                className={`flex-1 text-sm ${
-                  task.completed 
-                    ? 'line-through text-muted-foreground' 
-                    : task.priority 
-                    ? 'font-medium text-foreground' 
-                    : 'text-foreground'
-                }`}
-              >
-                {task.text}
-              </span>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeTask(task.id)}
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-          ))}
-        </div>
+              {tasks.map((task) => (
+                <SortableTaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleTask={toggleTask}
+                  onRemoveTask={removeTask}
+                  onTogglePriority={togglePriority}
+                />
+              ))}
+            </SortableContext>
+          </div>
+        </DndContext>
 
         {tasks.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">

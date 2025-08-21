@@ -9,14 +9,19 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  // Log the error
+  // Generate unique error ID for tracking
+  const errorId = Math.random().toString(36).substr(2, 9);
+  
+  // Log detailed error information (server-side only)
   logger.error('Express error handler', {
+    errorId,
     error: error.message,
-    stack: error.stack,
+    stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
     url: req.url,
     method: req.method,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
+    requestBody: req.method !== 'GET' ? JSON.stringify(req.body) : undefined
   });
 
   // Handle validation errors
@@ -27,6 +32,7 @@ export const errorHandler = (
         code: 'VALIDATION_ERROR',
         details: error.errors,
         statusCode: 400,
+        errorId: process.env.NODE_ENV !== 'production' ? errorId : undefined
       },
       success: false,
       timestamp: new Date().toISOString(),
@@ -68,14 +74,17 @@ export const errorHandler = (
     return;
   }
 
-  // Handle unknown errors
+  // Handle unknown errors (sanitized for production)
   res.status(500).json({
     error: {
-      message: process.env.NODE_ENV === 'production' 
-        ? 'Internal server error' 
-        : error.message,
+      message: 'Internal server error',
       code: 'INTERNAL_SERVER_ERROR',
       statusCode: 500,
+      errorId: process.env.NODE_ENV !== 'production' ? errorId : undefined,
+      ...(process.env.NODE_ENV !== 'production' && {
+        details: error.message,
+        stack: error.stack
+      })
     },
     success: false,
     timestamp: new Date().toISOString(),

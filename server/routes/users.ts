@@ -39,20 +39,34 @@ router.put('/profile', async (req: AuthenticatedRequest, res, next) => {
       throw new Error('User not authenticated');
     }
 
-    // Only allow updating name and email, not role
-    const { name, email } = req.body;
+    // Validate input data
+    const updateSchema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 100 },
+        email: { type: 'string', format: 'email' }
+      },
+      additionalProperties: false
+    };
+
+    const { name, email } = validateRequest(updateSchema, req.body);
     const updateData: any = {};
     
     if (name) updateData.name = name;
     if (email) updateData.email = email;
 
+    // Ensure user can only update their own profile
     const updatedUser = await UserRepository.update(req.user.id, updateData);
 
-    logger.info('User profile updated', { userId: req.user.id });
+    logger.info('User profile updated', { 
+      userId: req.user.id,
+      updatedFields: Object.keys(updateData),
+      ip: req.ip
+    });
 
     res.json({
       success: true,
-      data: { user: updatedUser },
+      data: { user: UserRepository.toPublic(updatedUser) },
       message: 'Profile updated successfully',
     });
   } catch (error) {
