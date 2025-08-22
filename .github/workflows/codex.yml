@@ -2,7 +2,7 @@ name: Codex - Multi-Agent Code Implementation
 
 on:
   issues:
-    types: [labeled]
+    types: [labeled, opened]
   issue_comment:
     types: [created]
 
@@ -12,10 +12,21 @@ permissions:
   issues: write
 
 jobs:
+  debug-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug Event
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Issue Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}"
+          echo "Label Name: ${{ github.event.label.name }}"
+
   run-codex:
     # Executa se a issue tem a label "codex"
     if: |
       (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'codex') ||
+      (github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'codex')) ||
       (github.event_name == 'issue_comment' && contains(github.event.issue.labels.*.name, 'codex'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
