@@ -14,7 +14,9 @@ permissions:
 jobs:
   run-codex:
     # Executa se a issue tem a label "codex"
-    if: contains(github.event.issue.labels.*.name, 'codex')
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'codex') ||
+      (github.event_name == 'issue_comment' && contains(github.event.issue.labels.*.name, 'codex'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

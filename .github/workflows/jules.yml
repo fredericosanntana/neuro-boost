@@ -14,7 +14,9 @@ permissions:
 jobs:
   run-jules:
     # Executa se a issue tem a label "jules"
-    if: contains(github.event.issue.labels.*.name, 'jules')
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'jules') ||
+      (github.event_name == 'issue_comment' && contains(github.event.issue.labels.*.name, 'jules'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
