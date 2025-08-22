@@ -1,0 +1,15 @@
+name: Test Issues Event
+
+on:
+  issues:
+    types: [opened, labeled, closed]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log Event
+        run: |
+          echo "Issue event triggered!"
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
