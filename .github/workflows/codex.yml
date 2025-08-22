@@ -13,10 +13,10 @@ permissions:
 
 jobs:
   run-codex:
-    # Dispara quando:
-    # 1) a issue ganhou a label "codex" (evento labeled)
-    # 2) a issue já possui a label "codex" e foi aberta
-    # 3) a issue já possui a label "codex" e recebeu um comentário
+    # Executa quando:
+    # - a issue recebe a label "codex" (issues:labeled)
+    # - a issue já possui a label "codex" e é aberta (issues:opened)
+    # - a issue já possui a label "codex" e recebe comentário (issue_comment:created)
     if: >
       (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'codex') ||
       (contains(join(github.event.issue.labels.*.name, ' '), 'codex'))
@@ -29,7 +29,7 @@ jobs:
           echo '--- EVENT ---'
           echo '${{ toJSON(github.event) }}'
           echo '--- LABELS ---'
-          echo '${{ join(github.event.issue.labels.*.name, ', ') }}'
+          echo "${{ join(github.event.issue.labels.*.name, ', ') }}"
 
       - name: Checkout Repository
         uses: actions/checkout@v4
