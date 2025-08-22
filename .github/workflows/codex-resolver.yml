@@ -29,8 +29,10 @@ jobs:
         with:
           python-version: '3.11'
 
+
       - name: Parse Issue Data
         id: issue_data
+
         run: |
           echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
           echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
