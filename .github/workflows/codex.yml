@@ -13,22 +13,19 @@ permissions:
 
 jobs:
   run-codex:
-    # Executa quando:
-    # - a issue recebe a label "codex" (issues:labeled)
-    # - a issue já possui a label "codex" e é aberta (issues:opened)
-    # - a issue já possui a label "codex" e recebe comentário (issue_comment:created)
-    if: >
-      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'codex') ||
-      (contains(join(github.event.issue.labels.*.name, ' '), 'codex'))
+    # Executa se:
+    # - a issue acabou de receber a label "codex" (issues:labeled), OU
+    # - a issue já tem "codex" quando foi aberta ou comentada.
+    if: (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'codex') || contains(join(github.event.issue.labels.*.name, ' '), 'codex')
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Debug - Dump event payload
         run: |
-          echo '--- EVENT ---'
-          echo '${{ toJSON(github.event) }}'
-          echo '--- LABELS ---'
+          echo "--- EVENT ---"
+          echo "${{ toJSON(github.event) }}"
+          echo "--- LABELS ---"
           echo "${{ join(github.event.issue.labels.*.name, ', ') }}"
 
       - name: Checkout Repository
@@ -40,14 +37,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Parse Issue Data
         id: issue_data
         run: |
-          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
-          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-          echo "TASK_ID=task-${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> "$GITHUB_OUTPUT"
+          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          echo "TASK_ID=task-${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
 
       - name: Setup gh auth
         env:
@@ -102,8 +99,8 @@ EOF
           cat > IMPLEMENTATION.md << 'EOF'
 # Implementation Report
 
-**Task**: ${{ steps.issue_data.outputs.ISSUE_TITLE }}  
-**Issue**: #${{ steps.issue_data.outputs.ISSUE_NUMBER }}  
+**Task**: ${{ steps.issue_data.outputs.ISSUE_TITLE }}
+**Issue**: #${{ steps.issue_data.outputs.ISSUE_NUMBER }}
 **Task ID**: ${{ steps.issue_data.outputs.TASK_ID }}
 
 ## Files Created
