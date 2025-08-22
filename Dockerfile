@@ -16,13 +16,16 @@ WORKDIR /app
 COPY package.json package-lock.json* bun.lockb* ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
 # Build applications
 RUN npm run build
+
+# Prune dev dependencies
+RUN npm prune --production
 
 # Production stage
 FROM node:20-alpine AS production
