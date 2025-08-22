@@ -32,7 +32,6 @@ jobs:
 
       - name: Parse Issue Data
         id: issue_data
-
         run: |
           echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
           echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
@@ -97,28 +96,25 @@ jobs:
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "Codex Bot"
-          git config user.email "codex@multiagent.system"
 
-          BRANCH_NAME="codex-${{ steps.issue_data.outputs.TASK_ID }}"
-          git checkout -b "$BRANCH_NAME"
-          git add .
-          
-          if ! git diff --cached --quiet; then
-            git commit -m "🤖 Codex: ${{ steps.issue_data.outputs.ISSUE_TITLE }}"
-            git push origin "$BRANCH_NAME"
-            
-            gh pr create \
-              --title "🤖 Codex Implementation: ${{ steps.issue_data.outputs.ISSUE_TITLE }}" \
-              --body "Auto-generated implementation for issue #${{ steps.issue_data.outputs.ISSUE_NUMBER }}" \
-              --label codex \
-              --label automated
-            
-            echo "✅ PR created successfully"
-          else
-            echo "No changes to commit"
-          fi
+            git config user.name "Codex Bot"
+            git config user.email "codex@multiagent.system"
+            BRANCH_NAME="codex-${{ steps.issue_data.outputs.TASK_ID }}"
+            git checkout -b "$BRANCH_NAME"
+            git add .
+            if ! git diff --cached --quiet; then
+              git commit -m "🤖 Codex: ${{ steps.issue_data.outputs.ISSUE_TITLE }}"
+              git push origin "$BRANCH_NAME"
+              gh pr create \
+                --title "🤖 Codex Implementation: ${{ steps.issue_data.outputs.ISSUE_TITLE }}" \
+                --body "Auto-generated implementation for issue #${{ steps.issue_data.outputs.ISSUE_NUMBER }}" \
+                --label codex \
+                --label automated
+              echo "✅ PR created successfully"
+            else
+              echo "No changes to commit"
+            fi
+
 
       - name: Report Results
         if: always()
