@@ -2,7 +2,7 @@ name: Codex - Multi-Agent Code Implementation
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   issue_comment:
     types: [created]
 
