@@ -1,0 +1,22 @@
+name: Codex Simple Test
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  test-codex:
+    if: github.event.label.name == 'codex'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Execution
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🤖 Codex Simple Test Executed!"
+          echo "Label: ${{ github.event.label.name }}"
+          echo "Issue: ${{ github.event.issue.number }}"
+          
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body "✅ Codex Simple Test: Label '${{ github.event.label.name }}' detected and workflow executed successfully!"
