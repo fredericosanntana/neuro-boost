@@ -98,22 +98,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            git config user.name "Codex Bot"
-            git config user.email "codex@multiagent.system"
+          git config user.name "Codex Bot"
+          git config user.email "codex@multiagent.system"
 
-            BRANCH_NAME="codex-${{ steps.issue_data.outputs.TASK_ID }}"
+          BRANCH_NAME="codex-${{ steps.issue_data.outputs.TASK_ID }}"
           git checkout -b "$BRANCH_NAME"
           git add .
           
           if ! git diff --cached --quiet; then
-              git commit -m "🤖 Codex: ${{ steps.issue_data.outputs.ISSUE_TITLE }}"
+            git commit -m "🤖 Codex: ${{ steps.issue_data.outputs.ISSUE_TITLE }}"
             git push origin "$BRANCH_NAME"
             
-              gh pr create \
-                --title "🤖 Codex Implementation: ${{ steps.issue_data.outputs.ISSUE_TITLE }}" \
-                --body "Auto-generated implementation for issue #${{ steps.issue_data.outputs.ISSUE_NUMBER }}" \
-                --label codex \
-                --label automated
+            gh pr create \
+              --title "🤖 Codex Implementation: ${{ steps.issue_data.outputs.ISSUE_TITLE }}" \
+              --body "Auto-generated implementation for issue #${{ steps.issue_data.outputs.ISSUE_NUMBER }}" \
+              --label codex \
+              --label automated
             
             echo "✅ PR created successfully"
           else
