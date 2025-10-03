@@ -76,7 +76,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ taskId, onSessionComplet
   const checkHyperfocus = useCallback(async () => {
     if (sessionId && state === 'running') {
       try {
-        const response = await apiClient.request(`/focus/sessions/${sessionId}/hyperfocus-check`);
+        const response: any = await apiClient.checkHyperfocus(sessionId);
         if (response.hyperfocus_detected && !hyperfocusWarning) {
           setHyperfocusWarning(true);
           toast({
@@ -131,13 +131,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ taskId, onSessionComplet
 
   const startSession = async () => {
     try {
-      const response = await apiClient.request('/focus/sessions', {
-        method: 'POST',
-        body: JSON.stringify({
-          task_id: taskId,
-          duration,
-          ambient_sound: ambientSound === 'none' ? undefined : ambientSound
-        })
+      const response: any = await apiClient.createFocusSession({
+        task_id: taskId,
+        duration,
+        ambient_sound: ambientSound === 'none' ? undefined : ambientSound
       });
 
       setSessionId(response.session.id);
@@ -173,12 +170,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ taskId, onSessionComplet
     if (!sessionId) return;
 
     try {
-      await apiClient.request(`/focus/sessions/${sessionId}/complete`, {
-        method: 'POST',
-        body: JSON.stringify({
-          effectiveness_rating: effectivenessRating,
-          interruption_reason: reason
-        })
+      await apiClient.completeFocusSession(sessionId, {
+        effectiveness_rating: effectivenessRating,
+        interruption_reason: reason
       });
 
       setState('idle');
@@ -212,12 +206,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ taskId, onSessionComplet
     if (!sessionId) return;
 
     try {
-      await apiClient.request(`/focus/sessions/${sessionId}/complete`, {
-        method: 'POST',
-        body: JSON.stringify({
-          effectiveness_rating: effectivenessRating,
-          interruption_reason: 'completed'
-        })
+      await apiClient.completeFocusSession(sessionId, {
+        effectiveness_rating: effectivenessRating,
+        interruption_reason: 'completed'
       });
 
       setState('idle');

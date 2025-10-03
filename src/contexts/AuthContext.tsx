@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = localStorage.getItem('authToken');
         if (token) {
           try {
-            const response = await apiClient.getCurrentUser();
+            const response: any = await apiClient.getCurrentUser();
             setUser(response.user);
             logInfo('User authenticated from stored token', { userId: response.user.id });
           } catch (error) {
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      const response = await apiClient.login(email, password);
+      const response: any = await apiClient.login(email, password);
       localStorage.setItem('authToken', response.token);
       setUser(response.user);
       

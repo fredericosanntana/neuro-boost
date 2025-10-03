@@ -73,13 +73,10 @@ export const DistractionLogger: React.FC<DistractionLoggerProps> = ({ sessionId 
     try {
       setIsLogging(true);
       
-      await apiClient.request(`/focus/sessions/${sessionId}/distractions`, {
-        method: 'POST',
-        body: JSON.stringify({
-          type: quickType,
-          severity: quickSeverity,
-          description: ''
-        })
+      await apiClient.addDistraction(sessionId, {
+        type: quickType,
+        severity: quickSeverity,
+        description: ''
       });
 
       const newDistraction = {
@@ -111,13 +108,10 @@ export const DistractionLogger: React.FC<DistractionLoggerProps> = ({ sessionId 
     try {
       setIsLogging(true);
       
-      await apiClient.request(`/focus/sessions/${sessionId}/distractions`, {
-        method: 'POST',
-        body: JSON.stringify({
-          type,
-          severity,
-          description: description.trim() || undefined
-        })
+      await apiClient.addDistraction(sessionId, {
+        type,
+        severity,
+        description: description.trim() || undefined
       });
 
       const newDistraction = {

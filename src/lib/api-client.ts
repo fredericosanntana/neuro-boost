@@ -11,7 +11,32 @@ interface ApiResponse<T = any> {
   };
 }
 
-class ApiClient {
+// Common interface for both real and mock clients
+export interface IApiClient {
+  login(email: string, password: string): Promise<any>;
+  register(email: string, password: string, name: string): Promise<any>;
+  getCurrentUser(): Promise<any>;
+  logout(): Promise<any>;
+  getTasks(filters?: any): Promise<any>;
+  getTask(id: string): Promise<any>;
+  createTask(taskData: any): Promise<any>;
+  updateTask(id: string, taskData: any): Promise<any>;
+  completeTask(id: string): Promise<any>;
+  deleteTask(id: string): Promise<any>;
+  getTaskStats(): Promise<any>;
+  getUserProfile(): Promise<any>;
+  updateUserProfile(userData: any): Promise<any>;
+  createFocusSession(sessionData: any): Promise<any>;
+  getFocusSessions(limit?: number): Promise<any>;
+  getFocusSession(id: string): Promise<any>;
+  updateFocusSession(id: string, sessionData: any): Promise<any>;
+  completeFocusSession(id: string, data: any): Promise<any>;
+  addDistraction(sessionId: string, distraction: any): Promise<any>;
+  checkHyperfocus(sessionId: string): Promise<any>;
+  getFocusStats(): Promise<any>;
+}
+
+class ApiClient implements IApiClient {
   private baseURL: string;
 
   constructor() {
@@ -250,14 +275,14 @@ import { simpleMockClient } from './simple-mock-client';
 
 // Use mock API client for development when backend is not running
 const isDevelopment = import.meta.env.DEV;
-const useMockApi = isDevelopment && !import.meta.env.VITE_USE_REAL_API;
+const useMockApi = isDevelopment && import.meta.env.VITE_USE_REAL_API !== 'true';
 
 console.log('🔧 API Client Setup:', { 
   isDevelopment, 
   useRealAPI: import.meta.env.VITE_USE_REAL_API, 
   useMockApi,
-  usingMock: useMockApi ? 'YES' : 'NO'
+  usingMock: useMockApi ? 'YES - Mock API' : 'NO - Real API'
 });
 
-export const apiClient = useMockApi ? simpleMockClient : new ApiClient();
+export const apiClient: IApiClient = useMockApi ? simpleMockClient : new ApiClient();
 export default apiClient;

@@ -10,7 +10,16 @@ interface AmbientSoundsProps {
   onSoundChange: (sound: string) => void;
 }
 
-const AMBIENT_SOUNDS = {
+interface SoundConfig {
+  name: string;
+  icon: React.ComponentType<any>;
+  color: string;
+  description: string;
+  generated?: boolean;
+  url?: string;
+}
+
+const AMBIENT_SOUNDS: Record<string, SoundConfig> = {
   'none': {
     name: 'None',
     icon: VolumeX,

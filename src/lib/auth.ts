@@ -29,7 +29,7 @@ export class AuthService {
       role: user.role,
     };
     
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
   }
 
   static verifyToken(token: string): TokenPayload | null {
