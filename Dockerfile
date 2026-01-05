@@ -16,13 +16,13 @@ WORKDIR /app
 COPY package.json package-lock.json* bun.lockb* ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
 # Build applications
-RUN npm run build
+RUN npm run build && npm run build:server
 
 # Production stage
 FROM node:20-alpine AS production
@@ -40,7 +40,7 @@ WORKDIR /app
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/server ./server
+COPY --from=builder --chown=nextjs:nodejs /app/dist-server ./dist-server
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -60,4 +60,4 @@ EXPOSE 3001
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "server/index.js"]
+CMD ["node", "dist-server/index.js"]

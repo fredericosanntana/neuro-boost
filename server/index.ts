@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import { logger } from '../src/lib/logger';
 import authRoutes from './routes/auth';
 import taskRoutes from './routes/tasks';
@@ -12,7 +12,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { connectDatabase } from './config/database';
 import { securityHeaders, apiRateLimit, authRateLimit, corsOptions } from './middleware/security';
 
-dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,7 +39,7 @@ app.use('/api', apiRateLimit);
 app.use('/api/auth', authRateLimit);
 
 // Body parsing middleware
-app.use(express.json({ 
+app.use(express.json({
   limit: '1mb', // Reduced from 10mb for security
   type: ['application/json', 'application/vnd.api+json']
 }));
@@ -60,7 +60,7 @@ app.use('/api/focus', focusRoutes);
 app.use(errorHandler);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
@@ -69,7 +69,7 @@ const startServer = async () => {
     // Validate required environment variables
     const requiredEnvVars = ['JWT_SECRET', 'DB_PASSWORD'];
     const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-    
+
     if (missingEnvVars.length > 0) {
       throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
     }
