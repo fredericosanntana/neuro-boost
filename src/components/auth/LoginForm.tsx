@@ -25,7 +25,7 @@ export const LoginForm: React.FC = () => {
       await login(email, password);
       toast({
         title: "Login Successful! 🎉",
-        description: "Welcome to ADHD Focus!",
+        description: "Welcome to Neuroboost!",
       });
     } catch (error) {
       console.error('🔧 Login error:', error);
@@ -42,7 +42,7 @@ export const LoginForm: React.FC = () => {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Login to ADHD Focus</CardTitle>
+        <CardTitle>Login to Neuroboost</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

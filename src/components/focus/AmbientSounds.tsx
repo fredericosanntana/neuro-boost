@@ -44,14 +44,14 @@ const AMBIENT_SOUNDS: Record<string, SoundConfig> = {
     name: 'Brown Noise',
     icon: Waves,
     color: 'text-amber-600',
-    description: 'Deep, rumbling sound for ADHD focus',
+    description: 'Deep, rumbling sound for Neuroboost focus',
     generated: true
   },
 };
 
-export const AmbientSounds: React.FC<AmbientSoundsProps> = ({ 
-  currentSound, 
-  onSoundChange 
+export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
+  currentSound,
+  onSoundChange
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([0.3]);
@@ -97,7 +97,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
     const noiseBuffer = audioContext.createBuffer(2, bufferSize, audioContext.sampleRate);
     const outputLeft = noiseBuffer.getChannelData(0);
     const outputRight = noiseBuffer.getChannelData(1);
-    
+
     if (soundType === 'brown-noise') {
       // Brown noise generation - better for ADHD
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
@@ -133,7 +133,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         outputRight[i] = rightTone;
       }
     }
-    
+
     return noiseBuffer;
   };
 
@@ -141,18 +141,18 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
     try {
       console.log(`🎵 Starting ${currentSound} sound...`);
       stopAmbientSound(); // Stop any existing sound
-      
+
       // Wait a bit to ensure cleanup is complete
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       if (currentSound === 'none') return;
 
       const soundConfig = AMBIENT_SOUNDS[currentSound as keyof typeof AMBIENT_SOUNDS];
-      
+
       if (soundConfig?.generated) {
         // Use Web Audio API for generated sounds
         const audioContext = initAudioContext();
-        
+
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
@@ -161,17 +161,17 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         const sourceNode = audioContext.createBufferSource();
         sourceNode.buffer = soundBuffer;
         sourceNode.loop = true;
-        
+
         const gainNode = audioContext.createGain();
         gainNode.gain.value = volume[0] * 0.3;
-        
+
         sourceNode.connect(gainNode);
         gainNode.connect(audioContext.destination);
         sourceNode.start(0);
-        
+
         sourceNodeRef.current = sourceNode;
         gainNodeRef.current = gainNode;
-        
+
         setIsPlaying(true);
         console.log(`🎵 Started generated ${currentSound} sound`);
       } else if (soundConfig?.url) {
@@ -181,12 +181,12 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         audio.src = soundConfig.url;
         audio.loop = true;
         audio.volume = volume[0];
-        
+
         // Try without crossOrigin first
         audio.addEventListener('loadstart', () => {
           console.log(`🎵 Started loading ${currentSound} audio`);
         });
-        
+
         audio.addEventListener('canplay', () => {
           console.log(`🎵 ${currentSound} audio can start playing`);
           audio.play().then(() => {
@@ -197,18 +197,18 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
             setIsPlaying(false);
           });
         });
-        
+
         audio.addEventListener('error', (e) => {
           console.error('Audio loading error for', currentSound, ':', e);
           console.log(`⚠️ Trying with crossOrigin for ${currentSound}`);
-          
+
           // Try again with crossOrigin
           const audioWithCors = new Audio();
           audioWithCors.crossOrigin = 'anonymous';
           audioWithCors.src = soundConfig.url;
           audioWithCors.loop = true;
           audioWithCors.volume = volume[0];
-          
+
           audioWithCors.addEventListener('canplay', () => {
             console.log(`🎵 ${currentSound} audio with CORS can start playing`);
             audioWithCors.play().then(() => {
@@ -216,7 +216,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
               console.log(`🎵 Successfully started ${currentSound} with CORS`);
             }).catch(corsErr => {
               console.error('CORS audio also failed:', corsErr);
-              
+
               // Final fallback to generated sound
               console.log(`⚠️ All audio loading failed for ${currentSound}, using generated fallback`);
               try {
@@ -224,22 +224,22 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
                 if (audioContext.state === 'suspended') {
                   audioContext.resume();
                 }
-                
+
                 const fallbackBuffer = generateNoiseBuffer(currentSound, audioContext);
                 const sourceNode = audioContext.createBufferSource();
                 sourceNode.buffer = fallbackBuffer;
                 sourceNode.loop = true;
-                
+
                 const gainNode = audioContext.createGain();
                 gainNode.gain.value = volume[0] * 0.3;
-                
+
                 sourceNode.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 sourceNode.start(0);
-                
+
                 sourceNodeRef.current = sourceNode;
                 gainNodeRef.current = gainNode;
-                
+
                 setIsPlaying(true);
                 console.log(`🎵 Started generated fallback for ${currentSound}`);
               } catch (fallbackError) {
@@ -248,23 +248,23 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
               }
             });
           });
-          
+
           audioWithCors.addEventListener('error', () => {
             console.error('CORS audio also failed for', currentSound);
             // Clean up failed audio element
             audioElementRef.current = null;
           });
-          
+
           // Clean up original audio element first
           if (audioElementRef.current) {
             audioElementRef.current.pause();
             audioElementRef.current.src = '';
           }
-          
+
           audioElementRef.current = audioWithCors;
           audioWithCors.load();
         });
-        
+
         audioElementRef.current = audio;
         audio.load();
       }
@@ -277,7 +277,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
   const stopAmbientSound = () => {
     try {
       console.log('🛑 Stopping all ambient sounds...');
-      
+
       // Stop Web Audio API sounds
       if (sourceNodeRef.current) {
         try {
@@ -288,7 +288,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         }
         sourceNodeRef.current = null;
       }
-      
+
       if (gainNodeRef.current) {
         try {
           gainNodeRef.current.disconnect();
@@ -297,7 +297,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         }
         gainNodeRef.current = null;
       }
-      
+
       // Stop HTML Audio elements
       if (audioElementRef.current) {
         try {
@@ -310,7 +310,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
         }
         audioElementRef.current = null;
       }
-      
+
       setIsPlaying(false);
       console.log('🛑 All ambient sounds stopped');
     } catch (error) {
@@ -332,11 +332,11 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
     if (soundKey === 'none') return;
 
     setIsPreviewMode(true);
-    
+
     // Temporarily start the sound for 3 seconds
     const originalSound = currentSound;
     onSoundChange(soundKey);
-    
+
     setTimeout(() => {
       setIsPreviewMode(false);
       onSoundChange(originalSound);
@@ -465,7 +465,7 @@ export const AmbientSounds: React.FC<AmbientSoundsProps> = ({
           {/* ADHD-specific Tips */}
           {currentSound === 'brown-noise' && (
             <div className="text-xs text-muted-foreground bg-amber-50 p-2 rounded border border-amber-200">
-              💡 <strong>ADHD Tip:</strong> Brown noise can help mask distracting sounds and improve focus by providing consistent auditory input.
+              💡 <strong>Focus Tip:</strong> Brown noise can help mask distracting sounds and improve focus by providing consistent auditory input.
             </div>
           )}
 

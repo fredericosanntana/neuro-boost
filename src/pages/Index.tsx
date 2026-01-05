@@ -53,11 +53,11 @@ const Index = () => {
                 <Brain className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">ADHD Focus</h1>
+                <h1 className="text-xl font-bold text-foreground">Neuroboost</h1>
                 <p className="text-sm text-muted-foreground">Olá, {user.name}!</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="gentle"
@@ -100,7 +100,7 @@ const Index = () => {
 
           {/* Right Column - Progress */}
           <div className="lg:col-span-1">
-            <ProgressTracker 
+            <ProgressTracker
               completedTasks={completedTasks}
               focusSessions={focusSessions}
               dailyGoal={6}
@@ -114,10 +114,10 @@ const Index = () => {
             Você tem o poder de conquistar seus objetivos! 💪
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Cada pequeno passo te leva mais perto do seu sucesso. 
+            Cada pequeno passo te leva mais perto do seu sucesso.
             Com foco e organização, você pode superar qualquer desafio.
           </p>
-          
+
           <div className="flex justify-center gap-4 mt-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-success">{completedTasks}</div>
