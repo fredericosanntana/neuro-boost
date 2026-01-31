@@ -15,13 +15,16 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
 # Build React application for production
 RUN npm run build
+
+# Prune dev dependencies
+RUN npm prune --production
 
 # Production stage with nginx
 FROM nginx:1.25-alpine AS production
